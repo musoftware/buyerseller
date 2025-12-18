@@ -6,6 +6,7 @@ import { Search, Menu, X, Bell, MessageSquare, User, LogOut, Settings, LayoutDas
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types";
 import NotificationDropdown from "@/components/NotificationDropdown";
+import SearchInput from "@/components/SearchInput";
 
 interface NavbarProps {
     userRole?: UserRole | null;
@@ -37,14 +38,7 @@ export default function Navbar({ userRole = null, isAuthenticated = false, userI
 
                     {/* Search Bar - Desktop */}
                     <div className="hidden md:flex flex-1 max-w-xl mx-8">
-                        <div className="relative w-full">
-                            <input
-                                type="text"
-                                placeholder="Search for services..."
-                                className="w-full pl-12 pr-4 py-2.5 rounded-full border border-neutral-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
-                            />
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
-                        </div>
+                        <SearchInput className="w-full" />
                     </div>
 
                     {/* Desktop Navigation */}

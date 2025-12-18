@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin, Calendar, Star, CheckCircle2, Globe, MessageSquare, Share2, MoreHorizontal } from "lucide-react";
+import { MapPin, Calendar, Star, CheckCircle2, Globe, MessageSquare, Share2, MoreHorizontal, Briefcase } from "lucide-react";
 import GigCard from "@/components/GigCard";
 import { Gig } from "@/types";
 
@@ -78,23 +78,27 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                                         <span className="font-medium text-gray-900">{new Date(user.createdAt).getFullYear()}</span>
                                     </div>
                                     {/* Languages */}
-                                    <div className="pt-2">
-                                        <span className="text-gray-500 flex items-center gap-2 mb-2"><Globe size={16} /> Languages</span>
-                                        <div className="flex flex-wrap gap-2">
-                                            {user.languages.split(',').map((lang, i) => (
-                                                <span key={i} className="px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-700">{lang}</span>
-                                            ))}
+                                    {user.languages && (
+                                        <div className="pt-2">
+                                            <span className="text-gray-500 flex items-center gap-2 mb-2"><Globe size={16} /> Languages</span>
+                                            <div className="flex flex-wrap gap-2">
+                                                {user.languages.split(',').map((lang, i) => (
+                                                    <span key={i} className="px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-700">{lang}</span>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                     {/* Skills */}
-                                    <div className="pt-2">
-                                        <span className="text-gray-500 flex items-center gap-2 mb-2"><CheckCircle2 size={16} /> Skills</span>
-                                        <div className="flex flex-wrap gap-2">
-                                            {user.skills.split(',').map((skill, i) => (
-                                                <span key={i} className="px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-700">{skill}</span>
-                                            ))}
+                                    {user.skills && (
+                                        <div className="pt-2">
+                                            <span className="text-gray-500 flex items-center gap-2 mb-2"><Briefcase size={16} /> Skills</span>
+                                            <div className="flex flex-wrap gap-2">
+                                                {user.skills.split(',').map((skill, i) => (
+                                                    <span key={i} className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-medium">{skill}</span>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
 
                                 <div className="mt-8 flex gap-3">

@@ -12,7 +12,9 @@ async function getGigs(searchParams: { [key: string]: string | string[] | undefi
     const query = searchParams.q as string;
     const minPrice = searchParams.min ? Number(searchParams.min) : undefined;
     const maxPrice = searchParams.max ? Number(searchParams.max) : undefined;
-    const sort = searchParams.sort as string; // 'price_asc', 'price_desc', 'newest'
+    const sort = searchParams.sort as string;
+    const page = Number(searchParams.page) || 1;
+    const limit = 12;
 
     const where: any = {
         status: "ACTIVE",
@@ -39,16 +41,21 @@ async function getGigs(searchParams: { [key: string]: string | string[] | undefi
     if (sort === "price_asc") orderBy = { price: "asc" };
     if (sort === "price_desc") orderBy = { price: "desc" };
 
-    const gigs = await prisma.gig.findMany({
-        where,
-        include: {
-            seller: true,
-        },
-        orderBy,
-    });
+    const [gigs, total] = await Promise.all([
+        prisma.gig.findMany({
+            where,
+            include: {
+                seller: true,
+            },
+            orderBy,
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+        prisma.gig.count({ where })
+    ]);
 
     // Map DB types to FE types
-    return gigs.map(gig => ({
+    const mappedGigs = gigs.map(gig => ({
         ...gig,
         tags: typeof gig.tags === 'string' ? JSON.parse(gig.tags) : gig.tags,
         images: typeof gig.images === 'string' ? JSON.parse(gig.images) : gig.images,
@@ -56,6 +63,8 @@ async function getGigs(searchParams: { [key: string]: string | string[] | undefi
         faqs: gig.faqs as any,
         requirements: typeof gig.requirements === 'string' ? JSON.parse(gig.requirements) : gig.requirements,
     })) as Gig[];
+
+    return { gigs: mappedGigs, total, page, totalPages: Math.ceil(total / limit) };
 }
 
 export default async function MarketplacePage({
@@ -64,7 +73,7 @@ export default async function MarketplacePage({
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
     const params = await searchParams; // Next.js 15+ allows awaiting searchParams, 16 likely enforces or supports it.
-    const gigs = await getGigs(params);
+    const { gigs, page, totalPages } = await getGigs(params);
     const currentCategory = params.category as string;
 
     return (
@@ -158,11 +167,38 @@ export default async function MarketplacePage({
 
                 {/* Gigs Grid */}
                 {gigs.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {gigs.map((gig) => (
-                            <GigCard key={gig.id} gig={gig} />
-                        ))}
-                    </div>
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {gigs.map((gig) => (
+                                <GigCard key={gig.id} gig={gig} />
+                            ))}
+                        </div>
+
+                        {/* Pagination */}
+                        <div className="mt-12 flex justify-center gap-2">
+                            {page > 1 && (
+                                <Link
+                                    href={`/marketplace?${new URLSearchParams({ ...params as any, page: (page - 1).toString() })}`}
+                                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                                >
+                                    Previous
+                                </Link>
+                            )}
+
+                            <span className="px-4 py-2 text-gray-600 flex items-center">
+                                Page {page} of {totalPages}
+                            </span>
+
+                            {page < totalPages && (
+                                <Link
+                                    href={`/marketplace?${new URLSearchParams({ ...params as any, page: (page + 1).toString() })}`}
+                                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                                >
+                                    Next
+                                </Link>
+                            )}
+                        </div>
+                    </>
                 ) : (
                     <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

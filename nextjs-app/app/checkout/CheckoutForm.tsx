@@ -14,6 +14,7 @@ interface CheckoutFormProps {
 export default function CheckoutForm({ gig, packageType }: CheckoutFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [requirements, setRequirements] = useState("");
 
     const packages = gig.packages as any[]; // Cast as needed based on your type definition
     const selectedPkg = packages.find(p => p.name === packageType) || packages[0];
@@ -33,7 +34,7 @@ export default function CheckoutForm({ gig, packageType }: CheckoutFormProps) {
                 body: JSON.stringify({
                     gigId: gig.id,
                     packageType: packageType,
-                    requirements: "Standard requirements", // Or collect from input
+                    requirements: requirements,
                 }),
             });
 
@@ -110,6 +111,18 @@ export default function CheckoutForm({ gig, packageType }: CheckoutFormProps) {
                 <p className="text-gray-600 mb-6">
                     You will be redirected to Stripe to securely complete your payment.
                 </p>
+
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Project Requirements
+                    </label>
+                    <textarea
+                        value={requirements}
+                        onChange={(e) => setRequirements(e.target.value)}
+                        placeholder="Please describe what you need..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[100px]"
+                    />
+                </div>
 
                 <button
                     onClick={handleCheckout}

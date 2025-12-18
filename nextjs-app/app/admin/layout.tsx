@@ -9,7 +9,9 @@ import {
     ShoppingBag,
     Settings,
     LogOut,
-    ShieldAlert
+    ShieldAlert,
+    Star,
+    PieChart
 } from "lucide-react";
 
 export default async function AdminLayout({
@@ -28,6 +30,8 @@ export default async function AdminLayout({
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Gigs", href: "/admin/gigs", icon: Briefcase },
         { name: "Orders", href: "/admin/orders", icon: ShoppingBag },
+        { name: "Reviews", href: "/admin/reviews", icon: Star },
+        { name: "Revenue", href: "/admin/revenue", icon: PieChart },
         { name: "Settings", href: "/admin/settings", icon: Settings },
     ];
 

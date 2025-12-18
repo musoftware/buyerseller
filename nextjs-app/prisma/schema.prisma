@@ -14,41 +14,42 @@ datasource db {
 // USER & AUTHENTICATION
 // ============================================
 
+  // ... existing content ...
+
+// ... existing content ...
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  username      String    @unique
-  fullName      String?   // Maps to NextAuth 'name' if needed
-  name          String?   // Standard NextAuth field
-  password      String?   // Optional for OAuth users
+  username      String?   @unique
+  fullName      String?
+  name          String?
+  password      String?
   avatar        String?
-  image         String?   // Standard NextAuth field
+  image         String?
   role          UserRole  @default(BUYER)
   status        UserStatus @default(ACTIVE)
   bio           String?
   location      String?
-  languages     String // SQLite doesn't support arrays, changed to String (comma separated)
-  skills        String // SQLite doesn't support arrays
+  languages     String?   // Changed to optional as seed might fail otherwise or requires defaults
+  skills        String?   // Changed to optional
   rating        Float     @default(0)
   totalReviews  Int       @default(0)
   totalEarnings Float     @default(0)
   totalSpent    Float     @default(0)
   isVerified    Boolean   @default(false)
-  emailVerified DateTime? // Standard NextAuth field
+  emailVerified DateTime?
   isOnline      Boolean   @default(false)
   
-  // Social Links
   website       String?
   linkedin      String?
   github        String?
   twitter       String?
   
-  // Timestamps
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   lastActive    DateTime  @default(now())
   
-  // Relations
   accounts          Account[]
   sessions          Session[]
   gigsAsSeller      Gig[]           @relation("SellerGigs")
@@ -62,11 +63,13 @@ model User {
   transactions      Transaction[]
   favorites         Favorite[]
   wallet            Wallet?
+  initiatedDisputes Dispute[]
   
   @@index([email])
   @@index([username])
   @@map("users")
 }
+
 
 model Account {
   id                 String  @id @default(cuid())
@@ -213,6 +216,7 @@ model Order {
   deliverables    Deliverable[]
   review          Review?
   messages        Message[]
+  dispute         Dispute?
   
   @@index([buyerId])
   @@index([sellerId])
@@ -457,4 +461,35 @@ model Favorite {
   @@unique([userId, gigId])
   @@index([userId])
   @@map("favorites")
+}
+
+model SystemSettings {
+  id              String   @id @default(cuid())
+  siteName        String   @default("GigStream")
+  platformFeePercent Float @default(10)
+  maintenanceMode Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  @@map("system_settings")
+}
+
+model Dispute {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  initiatorId String
+  initiator   User   @relation(fields: [initiatorId], references: [id])
+  reason    String
+  description String
+  status    DisputeStatus @default(OPEN)
+  resolution String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("disputes")
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED_REFUND
+  RESOLVED_COMPLETED
+  CANCELLED
 }

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle, Upload } from "lucide-react";
+import Link from "next/link";
+import { Loader2, CheckCircle, Upload, AlertTriangle } from "lucide-react";
 
 export default function OrderActions({ order, isSeller }: { order: any, isSeller: boolean }) {
     const router = useRouter();
@@ -53,6 +54,16 @@ export default function OrderActions({ order, isSeller }: { order: any, isSeller
                     {isLoading ? <Loader2 className="animate-spin" /> : <CheckCircle size={18} />}
                     Complete Order
                 </button>
+            )}
+
+            {order.status !== 'DISPUTED' && (
+                <Link
+                    href={`/dashboard/orders/${order.id}/dispute`}
+                    className="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2"
+                >
+                    <AlertTriangle size={18} />
+                    Report Problem
+                </Link>
             )}
         </div>
     );

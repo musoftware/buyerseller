@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default async function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body className="antialiased min-h-screen flex flex-col">
+        <GoogleAnalytics />
         <Providers>
           <Navbar
             isAuthenticated={!!session}

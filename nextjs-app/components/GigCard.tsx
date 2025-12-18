@@ -6,14 +6,22 @@ import { Star, Heart, TrendingUp } from "lucide-react";
 import { Gig } from "@/types";
 import { formatCurrency, getInitials } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface GigCardProps {
     gig: Gig;
     featured?: boolean;
+    initialIsFavorited?: boolean;
 }
 
-export default function GigCard({ gig, featured = false }: GigCardProps) {
+export default function GigCard({ gig, featured = false, initialIsFavorited = false }: GigCardProps) {
     const lowestPrice = Math.min(...gig.packages.map((p) => p.price));
+    const { data: session } = useSession();
+    const router = useRouter();
+    const [isFavorited, setIsFavorited] = useState(initialIsFavorited);
+    const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
     return (
         <Link href={`/gig/${gig.slug}`} className="group block">
@@ -44,13 +52,51 @@ export default function GigCard({ gig, featured = false }: GigCardProps) {
 
                     {/* Favorite Button */}
                     <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                             e.preventDefault();
-                            // TODO: Implement favorite functionality
+
+                            if (!session) {
+                                router.push("/login?callbackUrl=" + encodeURIComponent(window.location.pathname));
+                                return;
+                            }
+
+                            setIsTogglingFavorite(true);
+                            try {
+                                if (isFavorited) {
+                                    // Remove from favorites
+                                    const res = await fetch(`/api/favorites?gigId=${gig.id}`, {
+                                        method: "DELETE",
+                                    });
+                                    if (res.ok) {
+                                        setIsFavorited(false);
+                                    }
+                                } else {
+                                    // Add to favorites
+                                    const res = await fetch("/api/favorites", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ gigId: gig.id }),
+                                    });
+                                    if (res.ok) {
+                                        setIsFavorited(true);
+                                    }
+                                }
+                            } catch (error) {
+                                console.error("Error toggling favorite:", error);
+                            } finally {
+                                setIsTogglingFavorite(false);
+                            }
                         }}
-                        className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-md"
+                        disabled={isTogglingFavorite}
+                        className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Heart size={16} className="text-neutral-600" />
+                        <Heart
+                            size={16}
+                            className={cn(
+                                "transition-colors",
+                                isFavorited ? "text-red-500 fill-red-500" : "text-neutral-600"
+                            )}
+                        />
                     </button>
                 </div>
 

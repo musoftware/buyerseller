@@ -12,9 +12,9 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { conversationId, content } = body;
+        const { conversationId, content, attachments } = body;
 
-        if (!conversationId || !content) {
+        if (!conversationId || (!content && !attachments)) {
             return NextResponse.json({ error: "Missing fields" }, { status: 400 });
         }
 
@@ -36,8 +36,8 @@ export async function POST(request: Request) {
             data: {
                 conversationId,
                 senderId: session.user.id,
-                content,
-                // attachments...
+                content: content || "",
+                attachments: attachments ? attachments : undefined,
             },
             include: {
                 sender: { select: { id: true, fullName: true, avatar: true } },
@@ -50,12 +50,41 @@ export async function POST(request: Request) {
             data: { updatedAt: new Date() },
         });
 
-        // Trigger Pusher event
+        // ... existing pusher trigger for message ...
         try {
             await pusherServer.trigger(conversationId, 'new-message', message);
         } catch (error) {
             console.error("Pusher trigger error:", error);
-            // Don't fail the request if real-time update fails
+        }
+
+        // Get recipients to notify
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId },
+            include: { participants: true }
+        });
+
+        if (conversation) {
+            const recipients = conversation.participants.filter(p => p.userId !== session.user.id);
+
+            for (const recipient of recipients) {
+                // Create DB Notification
+                const notification = await prisma.notification.create({
+                    data: {
+                        userId: recipient.userId,
+                        type: "MESSAGE_RECEIVED",
+                        title: `New message from ${session.user.name}`,
+                        message: content ? (content.length > 50 ? content.substring(0, 50) + "..." : content) : "Sent an attachment",
+                        link: `/messages?c=${conversationId}`,
+                    }
+                });
+
+                // Trigger Pusher Notification
+                try {
+                    await pusherServer.trigger(`user-${recipient.userId}`, 'notification', notification);
+                } catch (error) {
+                    console.error("Pusher notification error:", error);
+                }
+            }
         }
 
         return NextResponse.json(message);

@@ -26,49 +26,22 @@ export default function ChatInterface({
     const [messages, setMessages] = useState<any[]>(initialMessages);
     const [newMessage, setNewMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Sync messages when prop changes (e.g. navigation)
-    useEffect(() => {
-        setMessages(initialMessages);
-    }, [initialMessages]);
+    // ... existing effects
 
+    const handleSendMessage = async (e?: React.FormEvent, attachmentUrl?: string) => {
+        if (e) e.preventDefault();
 
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    useEffect(() => {
-        if (!currentConversationId) return;
-
-        const channel = pusherClient.subscribe(currentConversationId);
-
-        channel.bind('new-message', (data: any) => {
-            // Avoid duplicating own message if optimistic update was used
-            setMessages((prev) => {
-                if (prev.some(m => m.id === data.id)) return prev;
-                return [...prev, data];
-            });
-        });
-
-        return () => {
-            pusherClient.unsubscribe(currentConversationId);
-        };
-    }, [currentConversationId]);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !currentConversationId) return;
+        if ((!newMessage.trim() && !attachmentUrl) || !currentConversationId) return;
 
         const tempId = Date.now().toString();
         const optimisticMessage = {
             id: tempId,
-            content: newMessage,
+            content: attachmentUrl ? "Sent an attachment" : newMessage,
+            attachments: attachmentUrl ? JSON.stringify([attachmentUrl]) : null,
             senderId: currentUser.id,
             sender: currentUser,
             createdAt: new Date(),
@@ -85,7 +58,8 @@ export default function ChatInterface({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     conversationId: currentConversationId,
-                    content: optimisticMessage.content
+                    content: attachmentUrl ? "" : optimisticMessage.content, // content can be empty if attached. But UI shows fallback text.
+                    attachments: attachmentUrl ? [attachmentUrl] : undefined
                 })
             });
 
@@ -93,23 +67,47 @@ export default function ChatInterface({
 
             const realMessage = await res.json();
             setMessages(prev => prev.map(m => m.id === tempId ? realMessage : m));
-            router.refresh(); // Update generic list order if needed
+            router.refresh();
         } catch (error) {
             console.error(error);
-            setMessages(prev => prev.filter(m => m.id !== tempId)); // remove failed
+            setMessages(prev => prev.filter(m => m.id !== tempId));
             alert("Failed to send message");
         } finally {
             setIsSending(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await fetch("/api/upload", { method: "POST", body: formData });
+            const data = await res.json();
+            if (data.url) {
+                await handleSendMessage(undefined, data.url);
+            }
+        } catch (error) {
+            console.error("Upload failed", error);
+            alert("Failed to upload image");
+        } finally {
+            setIsUploading(false);
         }
     };
 
     return (
         <div className="flex w-full h-full bg-white overflow-hidden shadow-sm border-t border-gray-200 lg:rounded-t-xl max-w-7xl mx-auto">
-            {/* Sidebar List */}
+            {/* ... Sidebar ... */}
             <div className={cn(
                 "w-full lg:w-80 border-r border-gray-200 flex flex-col h-full bg-white",
                 currentConversationId ? "hidden lg:flex" : "flex"
             )}>
+                {/* ... existing sidebar code ... */}
                 <div className="p-4 border-b border-gray-200">
                     <h2 className="text-xl font-bold mb-4">Messages</h2>
                     <div className="relative">
@@ -164,7 +162,7 @@ export default function ChatInterface({
                                             "text-sm truncate",
                                             isActive ? "text-emerald-700" : "text-gray-500"
                                         )}>
-                                            {conv.messages[0]?.content || "Start a conversation"}
+                                            {conv.messages[0]?.content || (conv.messages[0]?.attachments ? "📎 Attachment" : "Start a conversation")}
                                         </p>
                                     </div>
                                 </div>
@@ -183,6 +181,7 @@ export default function ChatInterface({
                     <>
                         {/* Header */}
                         <div className="p-4 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm z-10">
+                            {/* ... existing header ... */}
                             <div className="flex items-center gap-3">
                                 <button
                                     className="lg:hidden p-2 -ml-2 text-gray-600"
@@ -190,7 +189,6 @@ export default function ChatInterface({
                                 >
                                     <ChevronLeft />
                                 </button>
-
                                 {(() => {
                                     const conv = conversations.find(c => c.id === currentConversationId);
                                     const other = conv?.participants.find((p: any) => p.user.id !== currentUser.id)?.user;
@@ -216,7 +214,6 @@ export default function ChatInterface({
                                     );
                                 })()}
                             </div>
-
                             <div className="flex gap-2 text-gray-400">
                                 <button className="p-2 hover:bg-gray-100 rounded-full"><Phone size={20} /></button>
                                 <button className="p-2 hover:bg-gray-100 rounded-full"><Video size={20} /></button>
@@ -228,6 +225,16 @@ export default function ChatInterface({
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             {messages.map((msg, idx) => {
                                 const isMe = msg.senderId === currentUser.id;
+                                const hasAttachments = msg.attachments && Array.isArray(JSON.parse(JSON.stringify(msg.attachments))) && JSON.parse(JSON.stringify(msg.attachments)).length > 0;
+                                // Need to handle parsing carefully as Prisma returns Json type, might be stringified already or object.
+                                // In JS, it's usually object.
+                                let attachments: string[] = [];
+                                if (msg.attachments) {
+                                    try {
+                                        attachments = typeof msg.attachments === 'string' ? JSON.parse(msg.attachments) : msg.attachments;
+                                    } catch (e) { }
+                                }
+
                                 return (
                                     <div key={msg.id || idx} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
                                         <div className={cn(
@@ -236,7 +243,16 @@ export default function ChatInterface({
                                                 ? "bg-emerald-600 text-white rounded-tr-none"
                                                 : "bg-white text-gray-800 border border-gray-200 rounded-tl-none"
                                         )}>
-                                            <p>{msg.content}</p>
+                                            {attachments.length > 0 && (
+                                                <div className="mb-2">
+                                                    {attachments.map((url, i) => (
+                                                        <div key={i} className="relative w-48 h-32 rounded-lg overflow-hidden bg-gray-100">
+                                                            <Image src={url} alt="Attachment" fill className="object-cover" />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {msg.content && <p>{msg.content}</p>}
                                             <p className={cn(
                                                 "text-[10px] mt-1 text-right",
                                                 isMe ? "text-emerald-100" : "text-gray-400"
@@ -252,8 +268,20 @@ export default function ChatInterface({
 
                         {/* Input Area */}
                         <div className="p-4 bg-white border-t border-gray-200">
-                            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-                                <button type="button" className="p-3 text-gray-400 hover:bg-gray-100 rounded-full transition-colors">
+                            <form onSubmit={(e) => handleSendMessage(e)} className="flex items-end gap-2">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleFileSelect}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploading}
+                                    className="p-3 text-gray-400 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+                                >
                                     <ImageIcon size={20} />
                                 </button>
                                 <div className="flex-1 bg-gray-50 border border-gray-200 rounded-2xl flex items-center px-4 py-2 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all">
@@ -266,7 +294,7 @@ export default function ChatInterface({
                                 </div>
                                 <button
                                     type="submit"
-                                    disabled={!newMessage.trim() || isSending}
+                                    disabled={(!newMessage.trim() && !isUploading) || isSending}
                                     className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     <Send size={20} />
