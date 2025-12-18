@@ -1,0 +1,415 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  fullName      String
+  password      String
+  avatar        String?
+  role          UserRole  @default(BUYER)
+  status        UserStatus @default(ACTIVE)
+  bio           String?   @db.Text
+  location      String?
+  languages     String[]
+  skills        String[]
+  rating        Float     @default(0)
+  totalReviews  Int       @default(0)
+  totalEarnings Float     @default(0)
+  totalSpent    Float     @default(0)
+  isVerified    Boolean   @default(false)
+  isOnline      Boolean   @default(false)
+  
+  // Social Links
+  website       String?
+  linkedin      String?
+  github        String?
+  twitter       String?
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastActive    DateTime  @default(now())
+  
+  // Relations
+  gigsAsSeller      Gig[]           @relation("SellerGigs")
+  ordersAsBuyer     Order[]         @relation("BuyerOrders")
+  ordersAsSeller    Order[]         @relation("SellerOrders")
+  reviews           Review[]        @relation("ReviewerReviews")
+  receivedReviews   Review[]        @relation("SellerReviews")
+  sentMessages      Message[]       @relation("SenderMessages")
+  conversations     ConversationParticipant[]
+  notifications     Notification[]
+  transactions      Transaction[]
+  favorites         Favorite[]
+  wallet            Wallet?
+  
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+enum UserRole {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+// ============================================
+// GIGS/SERVICES
+// ============================================
+
+model Gig {
+  id              String      @id @default(cuid())
+  sellerId        String
+  seller          User        @relation("SellerGigs", fields: [sellerId], references: [id], onDelete: Cascade)
+  
+  title           String
+  slug            String      @unique
+  description     String      @db.Text
+  category        String
+  subcategory     String?
+  tags            String[]
+  images          String[]
+  video           String?
+  
+  // Packages stored as JSON
+  packages        Json
+  
+  // FAQ and Requirements
+  faqs            Json?
+  requirements    String[]
+  
+  status          GigStatus   @default(DRAFT)
+  rating          Float       @default(0)
+  totalReviews    Int         @default(0)
+  totalOrders     Int         @default(0)
+  totalRevenue    Float       @default(0)
+  isFeatured      Boolean     @default(false)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  orders          Order[]
+  reviews         Review[]
+  favorites       Favorite[]
+  
+  @@index([sellerId])
+  @@index([slug])
+  @@index([category])
+  @@index([status])
+  @@map("gigs")
+}
+
+enum GigStatus {
+  ACTIVE
+  PAUSED
+  DRAFT
+  PENDING_APPROVAL
+}
+
+// ============================================
+// ORDERS
+// ============================================
+
+model Order {
+  id              String        @id @default(cuid())
+  gigId           String
+  gig             Gig           @relation(fields: [gigId], references: [id])
+  
+  buyerId         String
+  buyer           User          @relation("BuyerOrders", fields: [buyerId], references: [id])
+  
+  sellerId        String
+  seller          User          @relation("SellerOrders", fields: [sellerId], references: [id])
+  
+  packageType     String        // BASIC, STANDARD, PREMIUM
+  price           Float
+  serviceFee      Float
+  totalAmount     Float
+  
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  
+  deliveryDate    DateTime
+  requirements    Json?
+  revisionCount   Int           @default(0)
+  maxRevisions    Int
+  
+  cancellationReason String?    @db.Text
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  
+  // Relations
+  deliverables    Deliverable[]
+  review          Review?
+  messages        Message[]
+  
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([gigId])
+  @@index([status])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  DELIVERED
+  REVISION_REQUESTED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Deliverable {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  fileName    String
+  fileUrl     String
+  fileSize    Int
+  fileType    String
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([orderId])
+  @@map("deliverables")
+}
+
+// ============================================
+// REVIEWS
+// ============================================
+
+model Review {
+  id              String   @id @default(cuid())
+  orderId         String   @unique
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  gigId           String
+  gig             Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  
+  reviewerId      String
+  reviewer        User     @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  
+  sellerId        String
+  seller          User     @relation("SellerReviews", fields: [sellerId], references: [id])
+  
+  rating          Int      // 1-5
+  comment         String   @db.Text
+  isPublic        Boolean  @default(true)
+  sellerResponse  String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([gigId])
+  @@index([reviewerId])
+  @@index([sellerId])
+  @@map("reviews")
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+model Conversation {
+  id            String      @id @default(cuid())
+  orderId       String?     @unique
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relations
+  participants  ConversationParticipant[]
+  messages      Message[]
+  
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id              String       @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  unreadCount     Int          @default(0)
+  lastReadAt      DateTime?
+  
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  senderId        String
+  sender          User         @relation("SenderMessages", fields: [senderId], references: [id])
+  
+  orderId         String?
+  order           Order?       @relation(fields: [orderId], references: [id])
+  
+  content         String       @db.Text
+  attachments     Json?
+  status          MessageStatus @default(SENT)
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        NotificationType
+  title       String
+  message     String            @db.Text
+  link        String?
+  isRead      Boolean           @default(false)
+  
+  createdAt   DateTime          @default(now())
+  
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  ORDER_PLACED
+  ORDER_DELIVERED
+  ORDER_COMPLETED
+  MESSAGE_RECEIVED
+  REVIEW_RECEIVED
+  PAYMENT_RECEIVED
+  WITHDRAWAL_COMPLETED
+  SYSTEM_ANNOUNCEMENT
+}
+
+// ============================================
+// PAYMENTS & WALLET
+// ============================================
+
+model Wallet {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  balance           Float    @default(0)
+  pendingClearance  Float    @default(0)
+  totalEarnings     Float    @default(0)
+  totalWithdrawals  Float    @default(0)
+  currency          String   @default("USD")
+  
+  updatedAt         DateTime @updatedAt
+  
+  @@map("wallets")
+}
+
+model Transaction {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  
+  orderId         String?
+  type            TransactionType
+  amount          Float
+  currency        String          @default("USD")
+  paymentMethod   PaymentMethod
+  status          PaymentStatus
+  description     String
+  
+  // Stripe/PayPal IDs
+  externalId      String?
+  
+  createdAt       DateTime        @default(now())
+  
+  @@index([userId])
+  @@index([orderId])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  ORDER_PAYMENT
+  REFUND
+  WITHDRAWAL
+  SERVICE_FEE
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  PAYPAL
+  STRIPE
+  BANK_TRANSFER
+}
+
+// ============================================
+// FAVORITES
+// ============================================
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  gigId     String
+  gig       Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, gigId])
+  @@index([userId])
+  @@map("favorites")
+}
