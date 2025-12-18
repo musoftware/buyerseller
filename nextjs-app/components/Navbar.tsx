@@ -5,13 +5,15 @@ import { useState } from "react";
 import { Search, Menu, X, Bell, MessageSquare, User, LogOut, Settings, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types";
+import NotificationDropdown from "@/components/NotificationDropdown";
 
 interface NavbarProps {
     userRole?: UserRole | null;
     isAuthenticated?: boolean;
+    userId?: string | null;
 }
 
-export default function Navbar({ userRole = null, isAuthenticated = false }: NavbarProps) {
+export default function Navbar({ userRole = null, isAuthenticated = false, userId = null }: NavbarProps) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
@@ -60,10 +62,7 @@ export default function Navbar({ userRole = null, isAuthenticated = false }: Nav
                         {isAuthenticated ? (
                             <div className="flex items-center space-x-4">
                                 {/* Notifications */}
-                                <button className="relative p-2 text-neutral-600 hover:text-primary-600 transition-colors">
-                                    <Bell size={20} />
-                                    <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
-                                </button>
+                                <NotificationDropdown userId={userId!} />
 
                                 {/* Messages */}
                                 <Link href="/messages" className="relative p-2 text-neutral-600 hover:text-primary-600 transition-colors">

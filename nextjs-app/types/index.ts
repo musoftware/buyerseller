@@ -16,13 +16,13 @@ export interface User {
     status: UserStatus;
     bio?: string;
     location?: string;
-    languages: string[];
-    skills: string[];
+    languages: string;
+    skills: string;
     rating: number;
     totalReviews: number;
     totalEarnings: number;
     totalSpent: number;
-    memberSince: Date;
+    createdAt: Date;
     lastActive: Date;
     isVerified: boolean;
     isOnline: boolean;

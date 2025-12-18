@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -18,20 +18,23 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   username      String    @unique
-  fullName      String
-  password      String
+  fullName      String?   // Maps to NextAuth 'name' if needed
+  name          String?   // Standard NextAuth field
+  password      String?   // Optional for OAuth users
   avatar        String?
+  image         String?   // Standard NextAuth field
   role          UserRole  @default(BUYER)
   status        UserStatus @default(ACTIVE)
-  bio           String?   @db.Text
+  bio           String?
   location      String?
-  languages     String[]
-  skills        String[]
+  languages     String // SQLite doesn't support arrays, changed to String (comma separated)
+  skills        String // SQLite doesn't support arrays
   rating        Float     @default(0)
   totalReviews  Int       @default(0)
   totalEarnings Float     @default(0)
   totalSpent    Float     @default(0)
   isVerified    Boolean   @default(false)
+  emailVerified DateTime? // Standard NextAuth field
   isOnline      Boolean   @default(false)
   
   // Social Links
@@ -46,6 +49,8 @@ model User {
   lastActive    DateTime  @default(now())
   
   // Relations
+  accounts          Account[]
+  sessions          Session[]
   gigsAsSeller      Gig[]           @relation("SellerGigs")
   ordersAsBuyer     Order[]         @relation("BuyerOrders")
   ordersAsSeller    Order[]         @relation("SellerOrders")
@@ -61,6 +66,44 @@ model User {
   @@index([email])
   @@index([username])
   @@map("users")
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? 
+  access_token       String? 
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? 
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
 
 enum UserRole {
@@ -86,11 +129,11 @@ model Gig {
   
   title           String
   slug            String      @unique
-  description     String      @db.Text
+  description     String
   category        String
   subcategory     String?
-  tags            String[]
-  images          String[]
+  tags            String // Stored as comma-separated or JSON string
+  images          String // Stored as comma-separated or JSON string
   video           String?
   
   // Packages stored as JSON
@@ -98,10 +141,11 @@ model Gig {
   
   // FAQ and Requirements
   faqs            Json?
-  requirements    String[]
+  requirements    String // Stored as comma-separated or JSON string
   
   status          GigStatus   @default(DRAFT)
   rating          Float       @default(0)
+  price           Float       @default(0) // Starting price for filtering
   totalReviews    Int         @default(0)
   totalOrders     Int         @default(0)
   totalRevenue    Float       @default(0)
@@ -151,13 +195,14 @@ model Order {
   
   status          OrderStatus   @default(PENDING)
   paymentStatus   PaymentStatus @default(PENDING)
+  paymentIntentId String?
   
   deliveryDate    DateTime
   requirements    Json?
   revisionCount   Int           @default(0)
   maxRevisions    Int
   
-  cancellationReason String?    @db.Text
+  cancellationReason String?
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -229,9 +274,9 @@ model Review {
   seller          User     @relation("SellerReviews", fields: [sellerId], references: [id])
   
   rating          Int      // 1-5
-  comment         String   @db.Text
+  comment         String
   isPublic        Boolean  @default(true)
-  sellerResponse  String?  @db.Text
+  sellerResponse  String?
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -287,7 +332,7 @@ model Message {
   orderId         String?
   order           Order?       @relation(fields: [orderId], references: [id])
   
-  content         String       @db.Text
+  content         String
   attachments     Json?
   status          MessageStatus @default(SENT)
   
@@ -316,7 +361,7 @@ model Notification {
   
   type        NotificationType
   title       String
-  message     String            @db.Text
+  message     String
   link        String?
   isRead      Boolean           @default(false)
   

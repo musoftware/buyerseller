@@ -44,8 +44,11 @@ export async function POST(request: Request) {
                 email: validatedData.email,
                 username: validatedData.username,
                 fullName: validatedData.fullName,
+                name: validatedData.fullName, // Sync for NextAuth
                 password: hashedPassword,
                 role: validatedData.role,
+                languages: "",
+                skills: "",
             },
             select: {
                 id: true,
@@ -76,10 +79,7 @@ export async function POST(request: Request) {
         );
     } catch (error) {
         if (error instanceof z.ZodError) {
-            return NextResponse.json(
-                { error: "Validation error", details: error.errors },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "Validation error", details: (error as any).errors }, { status: 400 });
         }
 
         console.error("Registration error:", error);

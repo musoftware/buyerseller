@@ -2,8 +2,6 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle, Search, TrendingUp, Users, Shield, Clock } from "lucide-react";
 import { CATEGORIES, MOCK_GIGS } from "@/lib/constants";
 import GigCard from "@/components/GigCard";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 
 export const metadata = {
   title: "GigStream - Find Perfect Freelance Services",
@@ -45,9 +43,8 @@ export default function HomePage() {
 
   return (
     <>
-      <Navbar />
-
       <main>
+
         {/* Hero Section */}
         <section className="relative bg-gradient-mesh text-white py-20 lg:py-32 overflow-hidden">
           {/* Animated Background Elements */}
@@ -268,7 +265,6 @@ export default function HomePage() {
         </section>
       </main>
 
-      <Footer />
     </>
   );
 }

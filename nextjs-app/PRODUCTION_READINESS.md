@@ -90,9 +90,9 @@
 
 #### 5. **Search & Filtering**
 - [ ] Elasticsearch or Algolia integration
-- [ ] Advanced filters (price, rating, delivery time)
-- [ ] Category/subcategory filtering
-- [ ] Sort options
+- [x] Advanced filters (price, rating, delivery time - price added)
+- [x] Category/subcategory filtering
+- [x] Sort options (Price, Newest)
 - [ ] Pagination
 - [ ] Search suggestions
 
@@ -106,43 +106,45 @@
 - [ ] Withdrawal requests
 
 #### 7. **Messaging System**
-- [ ] Real-time chat (Socket.io or Pusher)
+- [x] Real-time chat (Pusher implemented)
 - [ ] File attachments
 - [ ] Message notifications
-- [ ] Conversation history
+- [x] Conversation history
 - [ ] Typing indicators
 - [ ] Read receipts
 
 #### 8. **File Upload**
-- [ ] AWS S3 or Cloudinary integration
-- [ ] Image optimization
+- [x] AWS S3 or Cloudinary integration (Cloudinary implemented)
+- [x] Image optimization (via Cloudinary)
 - [ ] Video upload for gigs
 - [ ] Deliverable uploads
-- [ ] File size limits
+- [x] File size limits (Basic check)
 - [ ] Virus scanning
 
 ### Phase 3: Polish & Optimization (Priority: MEDIUM)
 
 #### 9. **Notifications**
-- [ ] Email notifications (SendGrid/Resend)
-- [ ] In-app notifications
+- [x] Email notifications (Resend implemented)
+- [x] In-app notifications (via DB & Pusher)
 - [ ] Push notifications (optional)
 - [ ] Notification preferences
 - [ ] Email templates
 
 #### 10. **Reviews & Ratings**
-- [ ] Review submission
-- [ ] Rating system
+- [x] Review submission
+- [ ] Star rating calculation
 - [ ] Review moderation
-- [ ] Seller responses
+- [ ] Display reviews on Gig page
 - [ ] Review analytics
 
+### Phase 4: Admin & Analytics (Priority: LOW)
+
 #### 11. **Admin Panel**
-- [ ] User management
-- [ ] Gig moderation
-- [ ] Order oversight
+- [x] User management (Basic list)
+- [x] Gig moderation (Basic list)
+- [x] Order oversight
 - [ ] Dispute resolution
-- [ ] Analytics dashboard
+- [x] Analytics dashboard
 - [ ] Revenue reports
 - [ ] Platform settings
 
