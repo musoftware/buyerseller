@@ -1,71 +1,11 @@
-import { prisma } from "@/lib/prisma";
+import { getGigs } from "@/lib/services/gig.service";
 import GigCard from "@/components/GigCard";
-import { Gig } from "@/types";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/constants";
+import { Gig } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-async function getGigs(searchParams: { [key: string]: string | string[] | undefined }) {
-    const category = searchParams.category as string;
-    const query = searchParams.q as string;
-    const minPrice = searchParams.min ? Number(searchParams.min) : undefined;
-    const maxPrice = searchParams.max ? Number(searchParams.max) : undefined;
-    const sort = searchParams.sort as string;
-    const page = Number(searchParams.page) || 1;
-    const limit = 12;
-
-    const where: any = {
-        status: "ACTIVE",
-    };
-
-    if (category) {
-        where.category = category;
-    }
-
-    if (query) {
-        where.OR = [
-            { title: { contains: query } },
-            { description: { contains: query } },
-        ];
-    }
-
-    if (minPrice !== undefined || maxPrice !== undefined) {
-        where.price = {};
-        if (minPrice !== undefined) where.price.gte = minPrice;
-        if (maxPrice !== undefined) where.price.lte = maxPrice;
-    }
-
-    let orderBy: any = { createdAt: "desc" };
-    if (sort === "price_asc") orderBy = { price: "asc" };
-    if (sort === "price_desc") orderBy = { price: "desc" };
-
-    const [gigs, total] = await Promise.all([
-        prisma.gig.findMany({
-            where,
-            include: {
-                seller: true,
-            },
-            orderBy,
-            skip: (page - 1) * limit,
-            take: limit,
-        }),
-        prisma.gig.count({ where })
-    ]);
-
-    // Map DB types to FE types
-    const mappedGigs = gigs.map(gig => ({
-        ...gig,
-        tags: typeof gig.tags === 'string' ? JSON.parse(gig.tags) : gig.tags,
-        images: typeof gig.images === 'string' ? JSON.parse(gig.images) : gig.images,
-        packages: gig.packages as any, // Cast to any or helper type
-        faqs: gig.faqs as any,
-        requirements: typeof gig.requirements === 'string' ? JSON.parse(gig.requirements) : gig.requirements,
-    })) as Gig[];
-
-    return { gigs: mappedGigs, total, page, totalPages: Math.ceil(total / limit) };
-}
 
 export default async function MarketplacePage({
     searchParams,

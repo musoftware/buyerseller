@@ -11,11 +11,11 @@ export interface User {
     email: string;
     username: string;
     fullName: string;
-    avatar?: string;
+    avatar?: string | null;
     role: UserRole;
     status: UserStatus;
-    bio?: string;
-    location?: string;
+    bio?: string | null;
+    location?: string | null;
     languages: string;
     skills: string;
     rating: number;
@@ -61,15 +61,24 @@ export interface GigPackage {
 export interface Gig {
     id: string;
     sellerId: string;
-    seller: User;
+    // ...
+    seller: User | {
+        id: string;
+        username: string;
+        fullName: string | null;
+        avatar?: string | null;
+        isVerified: boolean;
+        rating?: number;
+        level?: string;
+    };
     title: string;
     slug: string;
     description: string;
     category: string;
-    subcategory?: string;
+    subcategory?: string | null;
     tags: string[];
     images: string[];
-    video?: string;
+    video?: string | null;
     packages: GigPackage[];
     status: GigStatus;
     rating: number;

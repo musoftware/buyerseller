@@ -10,10 +10,19 @@ import {
     CreditCard
 } from "lucide-react";
 
+import { getDashboardStats } from "@/lib/services/dashboard.service";
+import { formatCurrency, formatRelativeTime } from "@/lib/utils";
+
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
     const user = session?.user as any;
+
+    if (!user) { // Should be handled by middleware, but safe check
+        return null;
+    }
+
     const isSeller = user?.role === "SELLER";
+    const stats = await getDashboardStats(user.id, user.role);
 
     return (
         <div className="space-y-8">
@@ -30,29 +39,29 @@ export default async function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard
                         title="Total Revenue"
-                        value="$12,345"
-                        trend="+12%"
+                        value={formatCurrency((stats as any).totalRevenue)}
+                        trend="Lifetime"
                         icon={DollarSign}
                         color="emerald"
                     />
                     <StatCard
                         title="Active Orders"
-                        value="8"
-                        trend="+2"
+                        value={stats.activeOrders}
+                        trend="Current"
                         icon={ShoppingBag}
                         color="blue"
                     />
                     <StatCard
-                        title="Average Rating"
-                        value="4.9"
-                        trend="+0.1"
+                        title="Overall Rating"
+                        value={(stats as any).rating.toFixed(1)}
+                        trend={`${(stats as any).totalReviews} reviews`}
                         icon={Star}
                         color="amber"
                     />
                     <StatCard
                         title="Total Gigs"
-                        value="5"
-                        trend="0"
+                        value={(stats as any).totalGigs}
+                        trend="Active"
                         icon={Briefcase}
                         color="purple"
                     />
@@ -61,21 +70,21 @@ export default async function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <StatCard
                         title="Active Orders"
-                        value="2"
+                        value={stats.activeOrders}
                         trend="In Progress"
                         icon={ShoppingBag}
                         color="emerald"
                     />
                     <StatCard
                         title="Total Spent"
-                        value="$450"
-                        trend="Last 30 days"
+                        value={formatCurrency((stats as any).totalSpent)}
+                        trend="Lifetime"
                         icon={CreditCard}
                         color="blue"
                     />
                     <StatCard
                         title="Completed Jobs"
-                        value="12"
+                        value={stats.completedOrders}
                         trend="Lifetime"
                         icon={Clock}
                         color="purple"
@@ -87,31 +96,36 @@ export default async function DashboardPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-bold text-gray-900">Recent Activity</h2>
-                    <button className="text-sm font-medium text-emerald-600 hover:text-emerald-500">
-                        View All
-                    </button>
+                    {/* Link to full activity or orders page */}
                 </div>
 
                 <div className="space-y-6">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-start space-x-4 pb-6 border-b border-gray-100 last:border-0 last:pb-0">
-                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                {isSeller ? <ShoppingBag size={18} className="text-gray-600" /> : <Briefcase size={18} className="text-gray-600" />}
+                    {stats.recentActivity.length > 0 ? (
+                        stats.recentActivity.map((activity: any) => (
+                            <div key={activity.id} className="flex items-start space-x-4 pb-6 border-b border-gray-100 last:border-0 last:pb-0">
+                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                    {isSeller ? <ShoppingBag size={18} className="text-gray-600" /> : <Briefcase size={18} className="text-gray-600" />}
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-900">
+                                        {activity.message}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        for <span className="font-medium text-gray-700">{activity.description}</span>
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-2">{formatRelativeTime(activity.date)}</p>
+                                </div>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                    ${activity.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800' :
+                                        activity.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-blue-100 text-blue-800'}`}>
+                                    {activity.status}
+                                </span>
                             </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-medium text-gray-900">
-                                    {isSeller ? "New order received" : "Order delivered"}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    for <span className="font-medium text-gray-700">Logo Design for Startup</span>
-                                </p>
-                                <p className="text-xs text-gray-400 mt-2">2 hours ago</p>
-                            </div>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                                {isSeller ? "New" : "Completed"}
-                            </span>
-                        </div>
-                    ))}
+                        ))
+                    ) : (
+                        <p className="text-gray-500 text-center py-4">No recent activity.</p>
+                    )}
                 </div>
             </div>
         </div>

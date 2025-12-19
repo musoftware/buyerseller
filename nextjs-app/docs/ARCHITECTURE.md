@@ -1194,3 +1194,183 @@ Added comprehensive flow diagrams for:
 - Monitoring & logging
 
 Reply "continue" to proceed with the final chunk.
+
+## Security Architecture
+
+### Layered Security Model
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                       Example Request                        │
+│             POST /api/orders (Create Order)                  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 1: Network & Infrastructure (Vercel/Cloudflare)       │
+│  - DDoS Protection                                          │
+│  - SSL/TLS Termination (HTTPS only)                         │
+│  - Geo-blocking (optional)                                  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 2: Application Middleware (middleware.ts)             │
+│  - CSP Headers (XSS Protection)                             │
+│  - CRS Headers (Cross-Origin Resource Sharing)              │
+│  - Rate Limiting (100 req/min)                              │
+│  - Host Header Validation                                   │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 3: Authentication & Authorization (NextAuth)          │
+│  - Session Validation (JWT verification)                    │
+│  - CSRF Token Check (Double submit cookie)                  │
+│  - RBAC Check (Is user authenticated? Is user a Buyer?)     │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 4: Input Validation (Zod Schemas)                     │
+│  - Type Checking (String, Number, etc.)                     │
+│  - Format Validation (Email, UUID, Min/Max length)          │
+│  - Sanitization (Strip HTML tags if needed)                 │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 5: Data Access (Prisma ORM)                           │
+│  - Parameterized Queries (SQL Injection prevention)         │
+│  - Relation Integrity Checks                                │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│  LAYER 6: Database (PostgreSQL)                              │
+│  - Encrypted Storage (At rest)                              │
+│  - Access Control Lists (ACLs)                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Security Measures
+
+1. **Authentication**
+   - **Bcrypt**: Adaptive hashing for passwords (work factor 10).
+   - **HttpOnly Cookies**: Prevents XSS attacks from stealing sessions.
+   - **Secure Flag**: Cookies only sent over HTTPS.
+   - **SameSite=Lax**: Prevents CSRF attacks.
+
+2. **API Protection**
+   - **Rate Limiting**: Token bucket algorithm per IP address.
+   - **Request Size Limits**: Max 10MB for uploads, 1MB for JSON.
+   - **Method Validation**: Strict HTTP verb checking.
+
+3. **Data Protection**
+   - **Environment Variables**: Secrets stored in `.env.local` / Vercel Vault.
+   - **Least Privilege**: Database user only has CRUD permissions on specific tables.
+   - **UUIDs**: Non-sequential IDs prevent resource enumeration attacks.
+
+---
+
+## Deployment Architecture
+
+### CI/CD Pipeline (Vercel)
+
+```
+┌──────────────┐
+│  Git Commit  │
+│  (GitHub)    │
+└──────┬───────┘
+       │ 1. Push to main/PR
+       ▼
+┌──────────────────────────────┐
+│  Vercel Build System         │
+│  - Clone repository          │
+│  - Install dependencies      │
+└──────┬───────────────────────┘
+       │ 2. npm install
+       ▼
+┌──────────────────────────────┐
+│  Static Analysis & Tests     │
+│  - TypeScript check (tsc)    │
+│  - Linting (eslint)          │
+│  - Unit Tests (Jest)         │
+└──────┬───────────────────────┘
+       │ 3. Validation passed?
+       │    (Block deployment if failed)
+       ▼
+┌──────────────────────────────┐
+│  Build Optimization          │
+│  - Next.js Build             │
+│  - Static Page Generation    │
+│  - Image Optimization        │
+│  - Route Map Generation      │
+└──────┬───────────────────────┘
+       │ 4. Build artifacts
+       ▼
+┌──────────────────────────────┐
+│  Edge Deployment             │
+│  - Distribute static assets  │
+│  - Deploy API functions      │
+│  - Update Edge Config        │
+└──────────────────────────────┘
+```
+
+### Environment Configuration
+
+| Environment | Database | Auth | Logs | Purpose |
+|-------------|----------|------|------|---------|
+| **Development** | SQLite/Local | LocalHost | Console | Feature building |
+| **Preview** | Neon (Branch) | Preview URL | Vercel Logs | PR testing |
+| **Production** | Neon (Main) | Custom Domain | Sentry/Datadog | Live traffic |
+
+---
+
+## Performance & Monitoring
+
+### Optimization Strategy
+
+1. **Server-Side Rendering (SSR)**
+   - Initial page loads are pre-rendered HTML.
+   - Reduces Time to First Contentful Paint (FCP).
+   - Essential for Marketplace and Gig Details pages (SEO).
+
+2. **Caching Layers**
+   - **Browser Cache**: Static assets (images, fonts, JS) cached for 1 year.
+   - **Request Memoization**: Deduplicates fetch requests in the current route render pass.
+   - **Data Cache (Next.js)**: Persists data across requests (revalidated on-demand).
+
+3. **Database Indexing**
+   - Indexes on frequently queried fields: `sellerId`, `category`, `status`, `slug`.
+   - Compound indexes for filtering: `[category, price, rating]`.
+
+### Monitoring Stack
+
+```
+┌──────────────────────────────┐
+│  Application (Next.js)       │
+└──────┬──────────────┬────────┘
+       │              │
+       ▼              ▼
+┌──────────────┐  ┌──────────────┐
+│  Log Stream  │  │  Web Vitals  │
+└──────┬───────┘  └──────┬───────┘
+       │                 │
+       ▼                 ▼
+┌──────────────┐  ┌──────────────┐
+│  Sentry /    │  │  Vercel      │
+│  LogRocket   │  │  Analytics   │
+├──────────────┤  ├──────────────┤
+│ - Error      │  │ - FCP, LCP   │
+│   Tracking   │  │ - CLS, FID   │
+│ - Stack      │  │ - Real User  │
+│   Traces     │  │   Metrics    │
+└──────────────┘  └──────────────┘
+```
+
+---
+
+**[DOCUMENTATION COMPLETE]**
+
+The System Architecture documentation is now fully complete, covering all aspects of the GigStream platform from high-level overviews to detailed security and deployment flows.

@@ -70,9 +70,9 @@ export default async function GigDetailsPage({ params }: { params: Promise<{ slu
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 relative rounded-full overflow-hidden bg-gray-200">
-                                        <Image src={gig.seller.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${gig.seller.fullName}`} alt={gig.seller.fullName} fill className="object-cover" />
+                                        <Image src={gig.seller.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${gig.seller.fullName || 'User'}`} alt={gig.seller.fullName || 'Seller'} fill className="object-cover" />
                                     </div>
-                                    <span className="font-medium text-gray-900">{gig.seller.fullName}</span>
+                                    <span className="font-medium text-gray-900">{gig.seller.fullName || 'Seller'}</span>
                                 </div>
                                 <div className="h-4 w-px bg-gray-300"></div>
                                 <div className="flex items-center gap-1">
@@ -102,7 +102,7 @@ export default async function GigDetailsPage({ params }: { params: Promise<{ slu
                             <div className="flex items-start gap-6">
                                 <div className="text-center space-y-2">
                                     <div className="w-24 h-24 relative rounded-full overflow-hidden bg-gray-200 mx-auto">
-                                        <Image src={gig.seller.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${gig.seller.fullName}`} alt={gig.seller.fullName} fill className="object-cover" />
+                                        <Image src={gig.seller.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${gig.seller.fullName || 'User'}`} alt={gig.seller.fullName || 'Seller'} fill className="object-cover" />
                                     </div>
                                     {gig.seller.isVerified && (
                                         <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
@@ -112,14 +112,14 @@ export default async function GigDetailsPage({ params }: { params: Promise<{ slu
                                 </div>
                                 <div className="flex-1 space-y-4">
                                     <div>
-                                        <h4 className="text-lg font-bold text-gray-900">{gig.seller.fullName}</h4>
-                                        <p className="text-gray-500 text-sm">{gig.seller.role}</p>
+                                        <h4 className="text-lg font-bold text-gray-900">{gig.seller.fullName || 'Seller'}</h4>
+                                        <p className="text-gray-500 text-sm">{(gig.seller as any).role || 'Seller'}</p>
                                     </div>
-                                    <p className="text-gray-600 text-sm italic">"{gig.seller.bio}"</p>
+                                    <p className="text-gray-600 text-sm italic">"{(gig.seller as any).bio || 'No bio available'}"</p>
                                     <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                                         <div>
                                             <span className="block font-semibold text-gray-900">From</span>
-                                            {gig.seller.location || "Unknown"}
+                                            {(gig.seller as any).location || "Unknown"}
                                         </div>
                                         <div>
                                             <span className="block font-semibold text-gray-900">Member Since</span>

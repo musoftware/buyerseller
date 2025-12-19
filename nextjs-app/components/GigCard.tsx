@@ -108,21 +108,21 @@ export default function GigCard({ gig, featured = false, initialIsFavorited = fa
                             {gig.seller.avatar ? (
                                 <Image
                                     src={gig.seller.avatar}
-                                    alt={gig.seller.fullName}
+                                    alt={gig.seller.fullName || 'User'}
                                     width={32}
                                     height={32}
                                     className="rounded-full"
                                 />
                             ) : (
-                                getInitials(gig.seller.fullName)
+                                getInitials(gig.seller.fullName || 'User')
                             )}
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-neutral-900 truncate">
-                                {gig.seller.fullName}
+                                {gig.seller.fullName || 'User'}
                             </p>
                             <p className="text-xs text-neutral-500 truncate">
-                                {gig.seller.location}
+                                {(gig.seller as any).location || 'Global'}
                             </p>
                         </div>
                         {gig.seller.isVerified && (

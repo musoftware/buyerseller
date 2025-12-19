@@ -2,7 +2,25 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getGigs } from "@/lib/services/gig.service"; // Import service
 import { z } from "zod";
+
+export async function GET(request: Request) {
+    const { searchParams } = new URL(request.url);
+    const params: any = {};
+
+    searchParams.forEach((value, key) => {
+        params[key] = value;
+    });
+
+    try {
+        const result = await getGigs(params);
+        return NextResponse.json(result);
+    } catch (error) {
+        console.error("Error fetching gigs:", error);
+        return NextResponse.json({ error: "Failed to fetch gigs" }, { status: 500 });
+    }
+}
 
 export async function POST(request: Request) {
     try {
