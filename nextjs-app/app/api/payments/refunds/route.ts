@@ -4,9 +4,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2024-12-18.acacia',
-})
+const stripe = process.env.STRIPE_SECRET_KEY
+    ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2025-12-15.clover',
+    })
+    : null;
 
 /**
  * Refund Management System
@@ -96,6 +98,10 @@ export const PUT = apiHandler(async (request: NextRequest) => {
     }
 
     if (approve) {
+        if (!stripe) {
+            return ApiResponse.serverError('Payment system not configured')
+        }
+
         try {
             // Process refund via Stripe
             const refund = await stripe.refunds.create({
@@ -175,6 +181,10 @@ export async function processPartialRefund(
     amount: number,
     reason: string
 ): Promise<{ success: boolean; refundId?: string; error?: string }> {
+    if (!stripe) {
+        return { success: false, error: 'Payment system not configured' }
+    }
+
     try {
         const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
@@ -199,6 +209,10 @@ export async function processFullRefund(
     paymentIntentId: string,
     reason: string
 ): Promise<{ success: boolean; refundId?: string; error?: string }> {
+    if (!stripe) {
+        return { success: false, error: 'Payment system not configured' }
+    }
+
     try {
         const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,

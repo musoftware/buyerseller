@@ -30,11 +30,10 @@ export async function POST(req: NextRequest) {
                 id: { in: messageIds },
                 conversationId,
                 senderId: { not: session.user.id },
-                read: false,
+                status: { not: 'READ' },
             },
             data: {
-                read: true,
-                readAt: new Date(),
+                status: 'READ',
             },
         });
 
@@ -55,7 +54,7 @@ export async function POST(req: NextRequest) {
 
         if (error instanceof z.ZodError) {
             return NextResponse.json(
-                { error: 'Invalid request data', details: error.errors },
+                { error: 'Invalid request data', details: error.issues },
                 { status: 400 }
             );
         }
@@ -93,7 +92,7 @@ export async function GET(req: NextRequest) {
             where: {
                 conversationId,
                 senderId: { not: session.user.id },
-                read: false,
+                status: { not: 'READ' },
             },
         });
 

@@ -68,7 +68,7 @@ export async function validateRequest<T>(
     } catch (error) {
         if (error instanceof z.ZodError) {
             const errors: Record<string, string[]> = {}
-            error.errors.forEach(err => {
+            error.issues.forEach(err => {
                 const path = err.path.join('.')
                 if (!errors[path]) {
                     errors[path] = []
@@ -98,7 +98,7 @@ export function apiHandler(
 
             if (error instanceof z.ZodError) {
                 const errors: Record<string, string[]> = {}
-                error.errors.forEach(err => {
+                error.issues.forEach(err => {
                     const path = err.path.join('.')
                     if (!errors[path]) {
                         errors[path] = []

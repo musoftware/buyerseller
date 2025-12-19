@@ -63,7 +63,7 @@ export async function scanFileWithVirusTotal(
 
         // If not found, upload and scan
         const formData = new FormData()
-        formData.append('file', new Blob([fileBuffer]), fileName)
+        formData.append('file', new Blob([new Uint8Array(fileBuffer)]), fileName)
 
         const uploadResponse = await fetch(`${VIRUSTOTAL_API_URL}/files`, {
             method: 'POST',

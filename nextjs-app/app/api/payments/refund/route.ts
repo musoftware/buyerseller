@@ -6,9 +6,11 @@ import { refundSchema } from '@/lib/security/validation-schemas';
 import { refundFundsFromEscrow } from '@/lib/payments/escrow';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2024-12-18.acacia',
-});
+const stripe = process.env.STRIPE_SECRET_KEY
+    ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2025-12-15.clover',
+    })
+    : null;
 
 /**
  * POST /api/payments/refund
@@ -78,6 +80,13 @@ export async function POST(req: NextRequest) {
         }
 
         const refundAmount = validatedData.amount || order.totalAmount;
+
+        if (!stripe) {
+            return NextResponse.json(
+                { error: 'Payment system not configured' },
+                { status: 500 }
+            );
+        }
 
         // Process Stripe refund
         const refund = await stripe.refunds.create({

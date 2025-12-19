@@ -53,10 +53,8 @@ export function initSentry() {
 
         // Integrations
         integrations: [
-            new Sentry.BrowserTracing({
-                tracePropagationTargets: ['localhost', /^https:\/\/yourapp\.com/],
-            }),
-            new Sentry.Replay({
+            // BrowserTracing is automatically included in Next.js
+            Sentry.replayIntegration({
                 maskAllText: true,
                 blockAllMedia: true,
             }),
@@ -143,13 +141,10 @@ export function addBreadcrumb(
 }
 
 /**
- * Start transaction for performance monitoring
+ * Start span for performance monitoring
  */
-export function startTransaction(name: string, op: string) {
-    return Sentry.startTransaction({
-        name,
-        op,
-    });
+export function startSpan<T>(options: { name: string; op: string }, callback: () => T): T {
+    return Sentry.startSpan(options, callback);
 }
 
 /**
